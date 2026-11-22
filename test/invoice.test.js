@@ -27,7 +27,7 @@ function compareOrder(order, expectedCheckout, expectedInvoice, expectedRows) {
   assert.deepEqual(rows, expectedRows, 'GST breakdown on the invoice');
 }
 
-test('order 1001 prints the 5% and 12% HSN slabs used at checkout', () => {
+test('the workshop fixture modelled on order 1001 uses 5% and 12% HSN slabs', () => {
   const order = {
     id: 1001,
     coupon: '',
@@ -127,4 +127,39 @@ test('the printable invoice matches a mixed-slab checkout with a capped discount
   const html = invoice.render(order);
   assert.match(html, /Invoice Total<\/td><td[^>]*>₹2007\.25</);
   assert.doesNotMatch(html, /Accountant Reconciliation Notice/);
+});
+
+test('the original order 1001 prints its recorded tea and dal GST', () => {
+  const order = {
+    id: 1001,
+    coupon: '',
+    items: [
+      { name: 'Tea', price: 140, qty: 2, hsn: '0902' },
+      { name: 'Dal', price: 165, qty: 2, hsn: '0713' }
+    ]
+  };
+  compareOrder(order,
+    { discount: 0, tax: 66.90, total: 676.90 },
+    { subtotal: 610, discount: 0, tax: 66.90, cgst: 33.45, sgst: 33.45, total: 676.90 },
+    [
+      { hsn: '0902', gstPercent: 18, lineTax: 50.40 },
+      { hsn: '0713', gstPercent: 5, lineTax: 16.50 }
+    ]
+  );
+});
+
+test('reprints keep the recorded bill when a historical coupon is unavailable', () => {
+  const order = {
+    id: 7,
+    coupon: 'RETIRED',
+    items: [{ name: 'Rice', price: 1000, qty: 1, hsn: '1006' }],
+    subtotal: 1000, discount: 100, tax: 45, total: 945
+  };
+  const html = invoice.render(order);
+  assert.match(html, /Invoice Total<\/td><td[^>]*>₹945\.00</);
+  assert.match(html, /Total GST\)<\/td><td[^>]*>₹45\.00</);
+  assert.match(html, /Coupon Discount \(RETIRED\)<\/td><td[^>]*>-₹100\.00</);
+  assert.match(html, /original per-item GST breakdown was not recorded/i);
+  assert.doesNotMatch(html, /₹50\.00|₹1050\.00/);
+  assert.equal(invoice.computeInvoiceFigures(order).total, 1050, 'audit can still detect the discrepancy');
 });

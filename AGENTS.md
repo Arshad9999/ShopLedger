@@ -25,7 +25,7 @@
 ## Commands
 
 - Start the app from the repository root with `npm start`. This runs `node server.js` and defaults to port 3000.
-- Run tests from the repository root with `node --test`. It currently discovers zero tests. The `npm test` script is a placeholder that exits with an error.
+- Run tests from the repository root with `node --test`. The `npm test` script is a placeholder that exits with an error.
 
 ## Rules
 
@@ -37,6 +37,6 @@
 
 ## Current ticket
 
-The printable invoice total and GST breakdown can differ from what the customer was billed. Checkout saves the figures from `pricing.computeTotals()`. Printing recalculates them in `invoice.computeInvoiceFigures()` using different GST and coupon rules.
+The invoice must match what checkout billed. Both paths use `pricing.computeTotals()`. If current rules produce different figures, the reprint shows the saved amounts and marks the historical per-item GST breakdown as unavailable.
 
 Limit changes to `lib/invoice.js`. Change `lib/tax.js` only if the fix requires it.

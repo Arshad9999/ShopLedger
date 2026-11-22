@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
   <title id="title">ShopLedger architecture</title>
-  <desc id="desc">The browser calls an Express server with four API routers and a separate printable invoice route. The numbered checkout flow follows a sale from the browser to data/db.json. The highlighted invoice module independently calculates figures for printing and GST reconciliation.</desc>
+  <desc id="desc">The browser calls an Express server with four API routers and a separate printable invoice route. The numbered checkout flow follows a sale from the browser to data/db.json. The highlighted invoice module uses checkout pricing for GST reconciliation and preserves the recorded bill when reprinting.</desc>
   <defs>
     <style>
       text { font-family: Arial, Helvetica, sans-serif; fill: #1d3433; font-size: 14px; }
@@ -76,8 +76,8 @@
     <text class="file ticket-text" x="48" y="520">lib/invoice.js</text>
     <text class="hint ticket-text" x="267" y="520">GET /orders/:id/invoice</text>
     <text x="48" y="544">store.read() → orders.get() → invoice.render()</text>
-    <text x="48" y="567">render() calls computeInvoiceFigures() to recalculate GST</text>
-    <text x="48" y="586">and the coupon discount for the printable HTML invoice.</text>
+    <text x="48" y="567">computeInvoiceFigures() uses pricing.computeTotals().</text>
+    <text x="48" y="586">Reprints show saved amounts if current pricing differs.</text>
 
     <path class="edge" d="M66 625 V604"/>
     <rect class="panel" x="32" y="625" width="499" height="61" rx="8"/>
