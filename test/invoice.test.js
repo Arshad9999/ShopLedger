@@ -27,7 +27,7 @@ function compareOrder(order, expectedCheckout, expectedInvoice, expectedRows) {
   assert.deepEqual(rows, expectedRows, 'GST breakdown on the invoice');
 }
 
-test('CURRENT BEHAVIOUR: order 1001 prints 18% on both 5% and 12% HSN items', () => {
+test('order 1001 prints the 5% and 12% HSN slabs used at checkout', () => {
   const order = {
     id: 1001,
     coupon: '',
@@ -39,15 +39,15 @@ test('CURRENT BEHAVIOUR: order 1001 prints 18% on both 5% and 12% HSN items', ()
 
   compareOrder(order,
     { discount: 0, tax: 28, total: 378 },
-    { subtotal: 350, discount: 0, tax: 63, cgst: 31.50, sgst: 31.50, total: 413 },
+    { subtotal: 350, discount: 0, tax: 28, cgst: 14, sgst: 14, total: 378 },
     [
-      { hsn: '1006', gstPercent: 18, lineTax: 36 },
-      { hsn: '0405', gstPercent: 18, lineTax: 27 }
+      { hsn: '1006', gstPercent: 5, lineTax: 10 },
+      { hsn: '0405', gstPercent: 12, lineTax: 18 }
     ]
   );
 });
 
-test('CURRENT BEHAVIOUR: order 1002 calculates SAVE10 on the GST-inclusive invoice amount', () => {
+test('order 1002 applies SAVE10 before calculating line GST', () => {
   const order = {
     id: 1002,
     coupon: 'SAVE10',
@@ -59,15 +59,15 @@ test('CURRENT BEHAVIOUR: order 1002 calculates SAVE10 on the GST-inclusive invoi
 
   compareOrder(order,
     { discount: 102, tax: 45.90, total: 963.90 },
-    { subtotal: 1020, discount: 120.36, tax: 183.60, cgst: 91.80, sgst: 91.80, total: 1083.24 },
+    { subtotal: 1020, discount: 102, tax: 45.90, cgst: 22.95, sgst: 22.95, total: 963.90 },
     [
-      { hsn: '1006', gstPercent: 18, lineTax: 115.20 },
-      { hsn: '1512', gstPercent: 18, lineTax: 68.40 }
+      { hsn: '1006', gstPercent: 5, lineTax: 28.80 },
+      { hsn: '1512', gstPercent: 5, lineTax: 17.10 }
     ]
   );
 });
 
-test('CURRENT BEHAVIOUR: order 1004 prints a SAVE10 discount above the INR 150 checkout cap', () => {
+test('order 1004 caps SAVE10 at INR 150 before GST', () => {
   const order = {
     id: 1004,
     coupon: 'SAVE10',
@@ -78,8 +78,8 @@ test('CURRENT BEHAVIOUR: order 1004 prints a SAVE10 discount above the INR 150 c
 
   compareOrder(order,
     { discount: 150, tax: 104.50, total: 2194.50 },
-    { subtotal: 2240, discount: 264.32, tax: 403.20, cgst: 201.60, sgst: 201.60, total: 2378.88 },
-    [{ hsn: '1508', gstPercent: 18, lineTax: 403.20 }]
+    { subtotal: 2240, discount: 150, tax: 104.50, cgst: 52.25, sgst: 52.25, total: 2194.50 },
+    [{ hsn: '1508', gstPercent: 5, lineTax: 104.50 }]
   );
 });
 
@@ -101,4 +101,30 @@ test('CURRENT BEHAVIOUR: order 1008 matches checkout for 18% items without a cou
       { hsn: '2106', gstPercent: 18, lineTax: 64.80 }
     ]
   );
+});
+
+test('the printable invoice matches a mixed-slab checkout with a capped discount', () => {
+  const order = {
+    id: 42,
+    coupon: 'SAVE10',
+    items: [
+      { name: 'Rice', price: 1000, qty: 1, hsn: '1006' },
+      { name: 'Ghee', price: 1000, qty: 1, hsn: '0405' }
+    ],
+    subtotal: 2000,
+    discount: 150,
+    tax: 157.25,
+    total: 2007.25
+  };
+
+  const printed = invoice.computeInvoiceFigures(order);
+  assert.equal(printed.total, order.total, 'printed total must equal the amount billed');
+  assert.equal(printed.tax, order.tax);
+  assert.equal(printed.discount, order.discount);
+  assert.deepEqual(printed.rows.map(row => row.lineTax), [46.25, 111]);
+  assert.deepEqual([printed.cgst, printed.sgst], [78.63, 78.62]);
+
+  const html = invoice.render(order);
+  assert.match(html, /Invoice Total<\/td><td[^>]*>₹2007\.25</);
+  assert.doesNotMatch(html, /Accountant Reconciliation Notice/);
 });
